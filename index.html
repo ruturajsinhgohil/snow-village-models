@@ -35,6 +35,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.setClearColor(0x87ceeb, 1);
 
 // Realistic soft shadows
 renderer.shadowMap.enabled = true;
