@@ -922,6 +922,12 @@ new THREE.MeshBasicMaterial({color: 0xff0000})
 );
 testCube.position.set(0, 2, 0);
 scene.add(testCube);
+
+window.addEventListener("error", function(e) {
+status.innerText = "JAVASCRIPT ERROR: " + e.message;
+});
+
+renderer.render(scene, camera);
   
 function animate(){
  requestAnimationFrame(animate);
