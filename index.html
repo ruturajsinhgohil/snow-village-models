@@ -916,13 +916,6 @@ function enableVillageShadows() {
 
 enableVillageShadows();
 
-const testCube = new THREE.Mesh(
-new THREE.BoxGeometry(3, 3, 3),
-new THREE.MeshBasicMaterial({color: 0xff0000})
-);
-testCube.position.set(0, 2, 0);
-scene.add(testCube);
-
 window.addEventListener("error", function(e) {
 status.innerText = "JAVASCRIPT ERROR: " + e.message;
 });
