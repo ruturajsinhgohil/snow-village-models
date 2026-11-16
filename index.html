@@ -29,11 +29,12 @@ camera.position.set(11, 10, 18);
 camera.lookAt(0, 1, 0);
   
 const renderer = new THREE.WebGLRenderer({
-  antialias: true
+  antialias: false,
+  powerPreference: "low-power"
 });
 
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(1);
+renderer.setPixelRatio(0.6);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.setClearColor(0x87ceeb, 1);
 
