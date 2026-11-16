@@ -33,13 +33,12 @@ const renderer = new THREE.WebGLRenderer({
 });
 
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setPixelRatio(1);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.setClearColor(0x87ceeb, 1);
 
 // Realistic soft shadows
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap 
+renderer.shadowMap.enabled = false;
 document.body.appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(0xddeeff, 0x687080, 2));
