@@ -525,6 +525,7 @@ for (let i = 0; i < 18; i++) {
 }
 
 const humanMixerList = [];
+const humanWalkers = [];
 const clock = new THREE.Clock();
 
 const humanLoader = new THREE.GLTFLoader();
@@ -564,6 +565,14 @@ humanLoader.load(
       human.rotation.y = index % 2 === 0 ? 0 : Math.PI;
 
       scene.add(human);
+      
+      humanWalkers.push({
+  model: human,
+  startX: pos[0],
+  z: pos[1],
+  speed: 0.35 + index * 0.06,
+  direction: index % 2 === 0 ? 1 : -1
+});
 
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(human);
@@ -836,6 +845,24 @@ humanMixerList.forEach((mixer) => {
   mixer.update(delta);
 });
 
+// MOVE PEOPLE ALONG THE VILLAGE PATH
+humanWalkers.forEach((walker) => {
+  walker.model.position.x +=
+    walker.direction * walker.speed * delta;
+
+  // Turn around at the end of the path
+  if (walker.model.position.x > 8) {
+    walker.model.position.x = 8;
+    walker.direction = -1;
+    walker.model.rotation.y = Math.PI;
+  }
+
+  if (walker.model.position.x < -8) {
+    walker.model.position.x = -8;
+    walker.direction = 1;
+    walker.model.rotation.y = 0;
+  }
+});
   
  const positions = flakes.geometry.attributes.position.array;
  for(let i=0;i<snowCount;i++){
