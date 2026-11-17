@@ -523,10 +523,9 @@ for (let i = 0; i < 18; i++) {
 
   scene.add(pile);
 }
- 
-// REAL 3D ANIMATED HUMAN
 
 const humanMixerList = [];
+const clock = new THREE.Clock();
 
 const humanLoader = new THREE.GLTFLoader();
 
@@ -534,41 +533,48 @@ humanLoader.load(
   "https://raw.githubusercontent.com/ruturajsinhgohil/snow-village-models/main/relaxed-walk-sam-3d-person-animated.glb",
 
   function(gltf) {
-    const human = gltf.scene;
+    const source = gltf.scene;
 
-    // Model size automatically adjust
-    const box = new THREE.Box3().setFromObject(human);
+    // Fit model to miniature village
+    const box = new THREE.Box3().setFromObject(source);
     const size = box.getSize(new THREE.Vector3());
+    const scale = 1.25 / size.y;
 
-    const targetHeight = 1.25;
-    const scale = targetHeight / size.y;
+    source.scale.setScalar(scale);
 
-    human.scale.setScalar(scale);
+    const scaledBox = new THREE.Box3().setFromObject(source);
+    const center = scaledBox.getCenter(new THREE.Vector3());
 
-    // Put feet on ground and center model
-    const newBox = new THREE.Box3().setFromObject(human);
-    const center = newBox.getCenter(new THREE.Vector3());
+    source.position.x -= center.x;
+    source.position.z -= center.z;
+    source.position.y -= scaledBox.min.y;
 
-    human.position.x -= center.x;
-    human.position.z -= center.z;
-    human.position.y -= newBox.min.y;
+    // Four different village positions
+    const positions = [
+      [-2, 1.4],
+      [3, 1.8],
+      [-5, -1.5],
+      [5, 3.5]
+    ];
 
-    // Place person on village path
-    human.position.x = -2;
-    human.position.z = 1.4;
+    positions.forEach((pos, index) => {
+      const human = THREE.SkeletonUtils.clone(source);
 
-    scene.add(human);
+      human.position.set(pos[0], 0, pos[1]);
+      human.rotation.y = index % 2 === 0 ? 0 : Math.PI;
 
-    // Play original walking animation
-    if (gltf.animations && gltf.animations.length > 0) {
-      const mixer = new THREE.AnimationMixer(human);
-      const action = mixer.clipAction(gltf.animations[0]);
-      action.play();
+      scene.add(human);
 
-      humanMixerList.push(mixer);
-    }
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(human);
+        const action = mixer.clipAction(gltf.animations[0]);
 
-    status.innerText = "REAL 3D HUMAN LOADED!";
+        action.play();
+        humanMixerList.push(mixer);
+      }
+    });
+
+    status.innerText = "4 ANIMATED PEOPLE LOADED!";
   },
 
   undefined,
@@ -578,70 +584,7 @@ humanLoader.load(
     console.error(error);
   }
 );
-   
-// SNOW DETAILS AND WARM STREET LAMPS
-
-const lampMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffcc77,
-  emissive: 0xff9900,
-  emissiveIntensity: 1.5
-});
-
-const blackMetal = new THREE.MeshStandardMaterial({
-  color: 0x252b32,
-  metalness: 0.5,
-  roughness: 0.5
-});
-
-function makeLamp(x, z) {
-  const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.045, 0.06, 1.8, 8),
-    blackMetal
-  );
-  pole.position.set(x, 0.9, z);
-  scene.add(pole);
-
-  const bulb = new THREE.Mesh(
-    new THREE.SphereGeometry(0.16, 12, 12),
-    lampMaterial
-  );
-  bulb.position.set(x, 1.85, z);
-  scene.add(bulb);
-
-  const light = new THREE.PointLight(0xffb75e, 1.5, 5);
-  light.position.set(x, 1.8, z);
-  scene.add(light);
-
-  const cap = new THREE.Mesh(
-    new THREE.ConeGeometry(0.24, 0.22, 8),
-    blackMetal
-  );
-  cap.position.set(x, 2.05, z);
-  scene.add(cap);
-}
-
-makeLamp(-7, 2);
-makeLamp(-1, 3);
-makeLamp(5, 2);
-makeLamp(7, -4);
-makeLamp(-5, -6);
-
-// Snow-covered small rocks
-for (let i = 0; i < 30; i++) {
-  const rock = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(0.2 + Math.random()*0.2, 0),
-    new THREE.MeshStandardMaterial({color:0xdce5ee})
-  );
-  rock.position.set(
-    (Math.random()-0.5)*24,
-    0.05,
-    (Math.random()-0.5)*20
-  );
-  rock.scale.y = 0.5;
-  scene.add(rock);
-  }
-
-
+  
 /* REALISTIC MULTIPLE MINIATURE CABINS */
 
 const cabinLoader = new THREE.GLTFLoader();
