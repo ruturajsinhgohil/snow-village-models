@@ -1,0 +1,974 @@
+
+<div id="loading">Building Snow Village...</div>
+
+<style>
+body { margin:0; overflow:hidden; background:#9bbbd5; }
+canvas { display:block; }
+#loading {
+  position:absolute; top:12px; left:12px;
+  color:white; font: bold 16px Arial;
+  z-index:5; text-shadow:1px 2px 4px #333;
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+<script>
+const status = document.getElementById("loading");
+
+try {
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9bbbd5);
+scene.fog = new THREE.Fog(0x9bbbd5, 18, 42);
+
+const camera = new THREE.PerspectiveCamera(
+  48, innerWidth / innerHeight, 0.1, 100
+);
+
+camera.position.set(11, 10, 18);
+camera.lookAt(0, 1, 0);
+  
+const renderer = new THREE.WebGLRenderer({
+  antialias: false,
+  powerPreference: "low-power"
+});
+
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(0.6);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.setClearColor(0x87ceeb, 1);
+
+// Realistic soft shadows
+renderer.shadowMap.enabled = false;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xddeeff, 0x687080, 2));
+ 
+const sun = new THREE.DirectionalLight(0xffedcf, 2);
+
+sun.position.set(-8, 15, 10);
+sun.castShadow = true;
+
+sun.shadow.mapSize.width = 1024;
+sun.shadow.mapSize.height = 1024;
+
+sun.shadow.camera.left = -22;
+sun.shadow.camera.right = 22;
+sun.shadow.camera.top = 22;
+sun.shadow.camera.bottom = -22;
+
+sun.shadow.bias = -0.0005;
+
+scene.add(sun);
+  
+// Materials
+const snow = new THREE.MeshStandardMaterial({
+  color: 0xf0f3f5,
+  roughness: 1,
+  metalness: 0
+});
+
+const wood = new THREE.MeshStandardMaterial({color:0x795039});
+const darkWood = new THREE.MeshStandardMaterial({color:0x493024});
+const roofMat = new THREE.MeshStandardMaterial({color:0x344454});
+const glass = new THREE.MeshStandardMaterial({
+  color:0xffc45c, emissive:0xff9c24, emissiveIntensity:0.7
+});
+const green = new THREE.MeshStandardMaterial({color:0x174b3b});
+
+// Snow ground
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(45,45),
+  snow
+);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = -0.12;
+scene.add(ground);
+
+
+/* PROCEDURAL REALISTIC SNOW TEXTURE */
+
+const snowCanvas = document.createElement("canvas");
+snowCanvas.width = 1024;
+snowCanvas.height = 1024;
+
+const ctx = snowCanvas.getContext("2d");
+
+ctx.fillStyle = "#F0F3F5";
+ctx.fillRect(0, 0, 1024, 1024);
+
+for (let i = 0; i < 9000; i++) {
+  const x = Math.random() * 1024;
+  const y = Math.random() * 1024;
+  const size = Math.random() * 2 + 0.4;
+
+  ctx.fillStyle = Math.random() > 0.5
+    ? "rgba(255,255,255,0.55)"
+    : "rgba(185,200,215,0.22)";
+
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+const snowTexture = new THREE.CanvasTexture(snowCanvas);
+
+snowTexture.wrapS = THREE.RepeatWrapping;
+snowTexture.wrapT = THREE.RepeatWrapping;
+snowTexture.repeat.set(4, 4);
+
+ground.material = new THREE.MeshStandardMaterial({
+  map: snowTexture,
+  color: 0xffffff,
+  roughness: 1,
+  metalness: 0
+});
+   
+// Small snow mounds
+for(let i=0;i<35;i++){
+  const mound = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5+Math.random()*0.8,12,8),
+    snow
+  );
+  mound.scale.y = 0.25;
+  mound.position.set(
+    (Math.random()-0.5)*30,
+    -0.08,
+    (Math.random()-0.5)*28
+  );
+  scene.add(mound);
+}
+
+// Cabin builder
+function makeCabin(x,z,scale=1){
+  const group = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(2,1.5,1.8), wood
+  );
+  body.position.y = 0.85;
+  group.add(body);
+
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(1.65,1.15,4),
+    roofMat
+  );
+  roof.rotation.y = Math.PI/4;
+  roof.position.y = 2.15;
+  roof.scale.set(1.05,1,0.85);
+  group.add(roof);
+
+  // Snow cap
+  const cap = new THREE.Mesh(
+    new THREE.ConeGeometry(1.69,0.16,4),
+    snow
+  );
+  cap.rotation.y = Math.PI/4;
+  cap.position.y = 2.68;
+  cap.scale.set(1.05,1,0.85);
+  group.add(cap);
+
+  // Door
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42,0.85,0.06),darkWood
+  );
+  door.position.set(0,0.45,0.93);
+  group.add(door);
+
+  // Front windows
+  for(const wx of [-0.62,0.62]){
+    const win = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42,0.42,0.07),glass
+    );
+    win.position.set(wx,1.05,0.94);
+    group.add(win);
+  }
+
+  // Chimney
+  const chimney = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28,0.85,0.3),darkWood
+  );
+  chimney.position.set(0.62,2.55,-0.3);
+  group.add(chimney);
+
+  group.position.set(x,0,z);
+  group.scale.setScalar(scale);
+  scene.add(group);
+}
+
+
+// Pine tree builder
+function makeTree(x,z,size=1){
+  const group = new THREE.Group();
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12,0.18,1,7),
+    darkWood
+  );
+  trunk.position.y=0.5;
+  group.add(trunk);
+
+  for(let i=0;i<3;i++){
+    const layer = new THREE.Mesh(
+      new THREE.ConeGeometry(0.85-i*0.12,1.5,7),
+      green
+    );
+    layer.position.y=1.05+i*0.55;
+    group.add(layer);
+
+    const snowTop = new THREE.Mesh(
+      new THREE.ConeGeometry(0.72-i*0.1,0.25,7),
+      snow
+    );
+    snowTop.position.y=1.72+i*0.55;
+    group.add(snowTop);
+  }
+
+  group.position.set(x,0,z);
+  group.scale.setScalar(size);
+  scene.add(group);
+}
+
+// Trees around village
+const treePositions = [
+ [-9,-7],[-8,0],[-9,7],[-6,8],
+ [-2,-9],[2,-9],[8,-7],[9,0],
+ [8,8],[0,8],[-2,3],[7,3],
+ [-7,-2],[3,7],[11,5],[-11,4]
+];
+
+/* SNOW COVERED WOODEN FENCES */
+
+const fenceWood = new THREE.MeshStandardMaterial({
+  color: 0x68452f,
+  roughness: 0.9
+});
+
+const fenceSnow = new THREE.MeshStandardMaterial({
+  color: 0xf5f8fc,
+  roughness: 1
+});
+
+function makeFence(x, z, length, rotation = 0) {
+  const fence = new THREE.Group();
+
+  // Fence posts
+  const postCount = Math.floor(length / 1.3) + 1;
+
+  for (let i = 0; i < postCount; i++) {
+    const post = new THREE.Mesh(
+      new THREE.BoxGeometry(0.13, 0.9, 0.13),
+      fenceWood
+    );
+
+    post.position.set(
+      -length / 2 + (length / (postCount - 1)) * i,
+      0.45,
+      0
+    );
+
+    fence.add(post);
+
+    // Snow on post top
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 10, 8),
+      fenceSnow
+    );
+
+    cap.scale.y = 0.35;
+    cap.position.set(post.position.x, 0.92, 0);
+    fence.add(cap);
+  }
+
+  // Two horizontal wooden rails
+  for (const height of [0.3, 0.68]) {
+    const rail = new THREE.Mesh(
+      new THREE.BoxGeometry(length, 0.1, 0.1),
+      fenceWood
+    );
+
+    rail.position.y = height;
+    fence.add(rail);
+
+    // Snow layer on rail
+    const snowRail = new THREE.Mesh(
+      new THREE.BoxGeometry(length, 0.045, 0.14),
+      fenceSnow
+    );
+
+    snowRail.position.set(0, height + 0.07, 0);
+    fence.add(snowRail);
+  }
+
+  fence.position.set(x, 0, z);
+  fence.rotation.y = rotation;
+
+  scene.add(fence);
+}
+
+// Village fence sections
+makeFence(-7, 5.5, 4.5, 0);
+makeFence(6, 7, 4, 0);
+makeFence(-9, -4.5, 3.5, Math.PI / 2);
+makeFence(9, -3, 3.5, Math.PI / 2);
+ 
+/* FROZEN STREAM */
+
+const iceMaterial = new THREE.MeshStandardMaterial({
+  color: 0x9dc9df,
+  roughness: 0.22,
+  metalness: 0.12
+});
+
+const iceHighlight = new THREE.MeshStandardMaterial({
+  color: 0xe4f5ff,
+  roughness: 0.2
+});
+
+// Long frozen stream
+const stream = new THREE.Mesh(
+  new THREE.PlaneGeometry(18, 1.4),
+  iceMaterial
+);
+
+stream.rotation.x = -Math.PI / 2;
+stream.position.set(0, 0.015, -12);
+scene.add(stream);
+
+// Icy snow banks on both sides
+for (let i = 0; i < 18; i++) {
+  const bank = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 12, 8),
+    snow
+  );
+
+  bank.scale.set(0.8, 0.22, 0.65);
+  bank.position.set(
+    -8.5 + i,
+    0.03,
+    -12 + (i % 2 === 0 ? -0.9 : 0.9)
+  );
+
+  scene.add(bank);
+}
+
+// Small ice highlights
+for (let i = 0; i < 12; i++) {
+  const shine = new THREE.Mesh(
+    new THREE.CircleGeometry(0.12, 8),
+    iceHighlight
+  );
+
+  shine.rotation.x = -Math.PI / 2;
+  shine.position.set(
+    -8 + Math.random() * 16,
+    0.025,
+    -12 + (Math.random() - 0.5) * 0.8
+  );
+
+  scene.add(shine);
+}
+
+/* WOODEN BRIDGE */
+
+const bridgeWood = new THREE.MeshStandardMaterial({
+  color: 0x795239,
+  roughness: 0.95
+});
+
+function makeBridge() {
+  const bridge = new THREE.Group();
+
+  // Wooden bridge floor
+  for (let i = 0; i < 9; i++) {
+    const plank = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.12, 1.9),
+      bridgeWood
+    );
+
+    plank.position.set(-0.96 + i * 0.24, 0.28, 0);
+    bridge.add(plank);
+  }
+
+  // Side railings
+  for (const side of [-0.82, 0.82]) {
+    const rail = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.12, 0.12),
+      bridgeWood
+    );
+
+    rail.position.set(0, 0.85, side);
+    bridge.add(rail);
+
+    for (let i = 0; i < 3; i++) {
+      const post = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.8, 0.12),
+        bridgeWood
+      );
+
+      post.position.set(
+        -0.9 + i * 0.9,
+        0.55,
+        side
+      );
+
+      bridge.add(post);
+    }
+  }
+
+  bridge.position.set(0, 0, -12);
+  scene.add(bridge);
+}
+
+makeBridge();
+  
+// Curved village path
+const pathPoints = [
+ new THREE.Vector3(-8,0.01,2),
+ new THREE.Vector3(-4,0.01,1),
+ new THREE.Vector3(0,0.01,2),
+ new THREE.Vector3(4,0.01,1),
+ new THREE.Vector3(8,0.01,3)
+];
+const pathCurve = new THREE.CatmullRomCurve3(pathPoints);
+
+// Two additional village lanes so people do not all follow one line.
+const sidePathA = new THREE.CatmullRomCurve3([
+ new THREE.Vector3(-7,0.01,-4),
+ new THREE.Vector3(-5,0.01,-1),
+ new THREE.Vector3(-3,0.01,3),
+ new THREE.Vector3(-1,0.01,6)
+]);
+const sidePathB = new THREE.CatmullRomCurve3([
+ new THREE.Vector3(7,0.01,-4),
+ new THREE.Vector3(5,0.01,-1),
+ new THREE.Vector3(6,0.01,3),
+ new THREE.Vector3(8,0.01,6)
+]);
+const backPath = new THREE.CatmullRomCurve3([
+ new THREE.Vector3(-5,0.01,-6),
+ new THREE.Vector3(-1,0.01,-7),
+ new THREE.Vector3(3,0.01,-6),
+ new THREE.Vector3(6,0.01,-5)
+]);
+
+const villageRoutes = [pathCurve, sidePathA, sidePathB, backPath];
+
+const path = new THREE.Mesh(
+ new THREE.TubeGeometry(pathCurve,60,0.42,8,false),
+ new THREE.MeshStandardMaterial({color:0xd4dce7})
+);
+scene.add(path);
+ 
+/* SNOW COVERED BUSHES AND SNOW PILES */
+
+const bushGreen = new THREE.MeshStandardMaterial({
+  color: 0x294b3b,
+  roughness: 1
+});
+
+const freshSnow = new THREE.MeshStandardMaterial({
+  color: 0xf8fbff,
+  roughness: 1
+});
+
+function makeSnowBush(x, z, size = 1) {
+  const bush = new THREE.Group();
+
+  // Green bush base
+  const base = new THREE.Mesh(
+    new THREE.SphereGeometry(0.55, 12, 10),
+    bushGreen
+  );
+  base.scale.set(1.2, 0.65, 0.9);
+  base.position.y = 0.3;
+  bush.add(base);
+
+  // Snow covering
+  const snowCap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.52, 12, 10),
+    freshSnow
+  );
+  snowCap.scale.set(1.2, 0.48, 0.9);
+  snowCap.position.y = 0.55;
+  bush.add(snowCap);
+
+  // Small snow clumps
+  for (let i = 0; i < 3; i++) {
+    const clump = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 10, 8),
+      freshSnow
+    );
+
+    clump.position.set(
+      (Math.random() - 0.5) * 0.7,
+      0.35 + Math.random() * 0.2,
+      (Math.random() - 0.5) * 0.5
+    );
+
+    bush.add(clump);
+  }
+
+  bush.position.set(x, 0, z);
+  bush.scale.setScalar(size);
+  scene.add(bush);
+}
+
+// Bush positions around cabins and village edges
+makeSnowBush(-7, -5, 1.1);
+makeSnowBush(-3, -7, 0.8);
+makeSnowBush(7, -5, 1.2);
+makeSnowBush(6, 6, 0.9);
+makeSnowBush(-7, 6, 1.0);
+makeSnowBush(10, 1, 1.1);
+makeSnowBush(-10, -1, 0.9);
+makeSnowBush(2, 8, 1.0);
+
+/* LITTLE VILLAGE LIFE DETAILS: FIREWOOD AND MARKET STALL */
+
+const logMaterial = new THREE.MeshStandardMaterial({ color: 0x76503a, roughness: 0.95 });
+function makeFirewoodStack(x, z) {
+  const stack = new THREE.Group();
+  for (let row = 0; row < 3; row++) {
+    for (let i = 0; i < 4; i++) {
+      const log = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.10, 0.10, 0.72, 8),
+        logMaterial
+      );
+      log.rotation.z = Math.PI / 2;
+      log.position.set((i - 1.5) * 0.22, 0.13 + row * 0.19, (row % 2) * 0.08);
+      stack.add(log);
+    }
+  }
+  stack.position.set(x, 0, z);
+  scene.add(stack);
+}
+makeFirewoodStack(-6.2, -2.2);
+makeFirewoodStack(5.8, 4.2);
+
+// Small outdoor winter market counter
+const stall = new THREE.Group();
+const stallWood = new THREE.MeshStandardMaterial({ color: 0x69442f, roughness: 0.9 });
+const counter = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.75, 0.8), stallWood);
+counter.position.y = 0.42;
+stall.add(counter);
+const canopy = new THREE.Mesh(
+  new THREE.BoxGeometry(2.05, 0.14, 1.05),
+  new THREE.MeshStandardMaterial({ color: 0x8b3f35, roughness: 0.9 })
+);
+canopy.position.y = 1.35;
+stall.add(canopy);
+for (const x of [-0.82, 0.82]) {
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.25, 7), stallWood);
+  post.position.set(x, 0.68, 0);
+  stall.add(post);
+}
+stall.position.set(2.8, 0, 5.8);
+scene.add(stall);
+
+// Larger soft snow piles
+for (let i = 0; i < 18; i++) {
+  const pile = new THREE.Mesh(
+    new THREE.SphereGeometry(0.7, 16, 12),
+    freshSnow
+  );
+
+  pile.scale.set(
+    1 + Math.random() * 0.7,
+    0.25 + Math.random() * 0.15,
+    0.8 + Math.random() * 0.5
+  );
+
+  pile.position.set(
+    (Math.random() - 0.5) * 25,
+    0.02,
+    (Math.random() - 0.5) * 22
+  );
+
+  scene.add(pile);
+}
+
+const humanMixerList = [];
+const humanWalkers = [];
+const clock = new THREE.Clock();
+
+const humanLoader = new THREE.GLTFLoader();
+
+humanLoader.load(
+  "https://raw.githubusercontent.com/ruturajsinhgohil/snow-village-models/main/relaxed-walk-sam-3d-person-animated.glb",
+
+  function(gltf) {
+    const source = gltf.scene;
+
+    // Fit model to miniature village
+    const box = new THREE.Box3().setFromObject(source);
+    const size = box.getSize(new THREE.Vector3());
+    const scale = 1.25 / size.y;
+
+    source.scale.setScalar(scale);
+
+    const scaledBox = new THREE.Box3().setFromObject(source);
+    const center = scaledBox.getCenter(new THREE.Vector3());
+
+    source.position.x -= center.x;
+    source.position.z -= center.z;
+    source.position.y -= scaledBox.min.y;
+
+    // Four different village positions
+    const positions = [
+      [-2, 1.4],
+      [3, 1.8],
+      [-5, -1.5],
+      [5, 3.5]
+    ];
+
+    positions.forEach((pos, index) => {
+      const human = THREE.SkeletonUtils.clone(source);
+
+      human.position.set(pos[0], 0, pos[1]);
+      human.rotation.y = index % 2 === 0 ? 0 : Math.PI;
+
+      scene.add(human);
+      
+      humanWalkers.push({
+        model: human,
+        route: villageRoutes[index],
+        distance: [0.08, 0.42, 0.68, 0.25][index],
+        speed: [0.018, 0.014, 0.016, 0.012][index],
+        direction: index % 2 === 0 ? 1 : -1
+      });
+
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(human);
+        const action = mixer.clipAction(gltf.animations[0]);
+
+        action.play();
+        humanMixerList.push(mixer);
+      }
+    });
+
+    status.innerText = "4 ANIMATED PEOPLE LOADED!";
+  },
+
+  undefined,
+
+  function(error) {
+    status.innerText = "HUMAN MODEL LOADING FAILED!";
+    console.error(error);
+  }
+);
+  
+/* REALISTIC MULTIPLE MINIATURE CABINS */
+
+const cabinLoader = new THREE.GLTFLoader();
+
+cabinLoader.load(
+  "https://raw.githubusercontent.com/ruturajsinhgohil/snow-village-models/main/snowy-cabin.glb",
+
+  function(gltf) {
+    const original = gltf.scene;
+
+    // Find original model dimensions
+    const box = new THREE.Box3().setFromObject(original);
+    const size = box.getSize(new THREE.Vector3());
+
+    // Fit cabin to village scale
+    const targetWidth = 2.3;
+    const factor = targetWidth / Math.max(size.x, size.z);
+
+    original.scale.setScalar(factor);
+
+    // Center model and place its bottom on ground
+    const scaledBox = new THREE.Box3().setFromObject(original);
+    const center = scaledBox.getCenter(new THREE.Vector3());
+
+    original.position.x -= center.x;
+    original.position.z -= center.z;
+    original.position.y -= scaledBox.min.y;
+
+    // Five cabin positions
+    const locations = [
+      [-5, -3],
+      [0, -5],
+      [5, -2],
+      [-4, 4],
+      [4, 5]
+    ];
+
+    
+locations.forEach((pos, i) => {
+  const cabin = original.clone(true);
+
+  cabin.position.x += pos[0];
+  cabin.position.z += pos[1];
+
+  const variation = [1, 0.92, 1.05, 0.95, 1.02][i];
+  cabin.scale.multiplyScalar(variation);
+
+  // Snow material
+  const roofSnow = new THREE.MeshStandardMaterial({
+    color: 0xf8fbff,
+    roughness: 1
+  });
+
+  // Roof dimensions
+  const roofWidth = size.x * 0.58;
+  const roofDepth = size.z * 0.16;
+  const roofHeight = size.y * 0.84;
+
+  // Main snow layer along roof ridge
+  const snowLayer = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 20, 12),
+    roofSnow
+  );
+
+  snowLayer.scale.set(
+    roofWidth,
+    0.065,
+    roofDepth
+  );
+
+  snowLayer.position.set(0, roofHeight, 0);
+  cabin.add(snowLayer);
+
+  // Small snow drifts
+  for (let j = 0; j < 4; j++) {
+    const drift = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 12, 8),
+      roofSnow
+    );
+
+    drift.scale.set(
+      0.22,
+      0.055,
+      0.18
+    );
+
+    drift.position.set(
+      (Math.random() - 0.5) * roofWidth * 1.5,
+      roofHeight - 0.04,
+      (Math.random() - 0.5) * roofDepth * 3
+    );
+
+    cabin.add(drift);
+  }
+
+  scene.add(cabin);
+});
+
+    status.innerText = "5 MINIATURE CABINS LOADED!";
+  },
+
+  undefined,
+
+  function(error) {
+    status.innerText = "Cabin loading failed!";
+    console.error(error);
+  }
+);
+  
+
+/* REALISTIC SNOWY PINE TREES */
+
+const treeLoader = new THREE.GLTFLoader();
+
+treeLoader.load(
+  "https://raw.githubusercontent.com/ruturajsinhgohil/snow-village-models/main/snowy-pine-tree.glb",
+
+  function(gltf) {
+    const originalTree = gltf.scene;
+
+    // Automatically calculate model size
+    const box = new THREE.Box3().setFromObject(originalTree);
+    const size = box.getSize(new THREE.Vector3());
+
+    const factor = 3.2 / Math.max(size.x, size.y, size.z);
+    originalTree.scale.setScalar(factor);
+
+    const newBox = new THREE.Box3().setFromObject(originalTree);
+    const center = newBox.getCenter(new THREE.Vector3());
+
+    originalTree.position.x -= center.x;
+    originalTree.position.z -= center.z;
+    originalTree.position.y -= newBox.min.y;
+
+    const treeLocations = [
+      [-9,-7],[-8,0],[-9,7],[-6,8],
+      [-2,-9],[2,-9],[8,-7],[9,0],
+      [8,8],[0,8],[-2,3],[7,3],
+      [-7,-2],[3,7],[11,5],[-11,4],
+      [-10,-3],[10,3],[-5,9],[5,-9]
+    ];
+
+    treeLocations.forEach((pos, i) => {
+      const tree = originalTree.clone(true);
+
+      const variation = [1,0.9,1.1,0.95][i%4];
+      tree.scale.multiplyScalar(variation);
+
+      tree.position.x += pos[0];
+      tree.position.z += pos[1];
+
+      scene.add(tree);
+    });
+
+    status.innerText = "REALISTIC TREES LOADED!";
+  },
+
+  undefined,
+
+  function(error) {
+    status.innerText = "Tree loading failed!";
+    console.error(error);
+  }
+);
+    
+
+/* MINIATURE FOOTPRINTS */
+
+const footprintMaterial = new THREE.MeshStandardMaterial({
+  color: 0xc4d0df,
+  roughness: 1
+});
+
+function makeFootprints(startX, startZ, count) {
+  for (let i = 0; i < count; i++) {
+    for (let side = 0; side < 2; side++) {
+      const print = new THREE.Mesh(
+        new THREE.CircleGeometry(0.055, 10),
+        footprintMaterial
+      );
+
+      print.rotation.x = -Math.PI / 2;
+      print.position.set(
+        startX + i * 0.28,
+        0.012,
+        startZ + (side === 0 ? -0.09 : 0.09)
+      );
+
+      scene.add(print);
+    }
+  }
+}
+
+makeFootprints(-7, 1.4, 18);
+makeFootprints(-2, 2, 15);
+makeFootprints(1, 3, 18);
+makeFootprints(4, 1, 15);
+               
+// Falling snow particles
+const snowCount = 100;
+const snowPositions = new Float32Array(snowCount*3);
+
+for(let i=0;i<snowCount;i++){
+ snowPositions[i*3]=(Math.random()-0.5)*35;
+ snowPositions[i*3+1]=Math.random()*18;
+ snowPositions[i*3+2]=(Math.random()-0.5)*35;
+}
+
+const snowGeometry = new THREE.BufferGeometry();
+snowGeometry.setAttribute(
+ "position",new THREE.BufferAttribute(snowPositions,3)
+);
+const flakes = new THREE.Points(
+ snowGeometry,
+ new THREE.PointsMaterial({
+  color:0xffffff,size:0.09,transparent:true,opacity:0.9
+ })
+);
+scene.add(flakes);
+
+status.innerText = "Snow Village Ready!";
+
+/* ENABLE SHADOWS ON VILLAGE OBJECTS */
+
+function enableVillageShadows() {
+  scene.traverse(function(object) {
+    if (object.isMesh) {
+      object.castShadow = true;
+      object.receiveShadow = true;
+    }
+  });
+}
+
+// enableVillageShadows();
+
+window.addEventListener("error", function(e) {
+status.innerText = "JAVASCRIPT ERROR: " + e.message;
+});
+
+renderer.render(scene, camera);
+  
+function animate(){
+ requestAnimationFrame(animate);
+
+// REAL HUMAN ANIMATION UPDATE
+const delta = clock.getDelta();
+
+humanMixerList.forEach((mixer) => {
+  mixer.update(delta);
+});
+
+// EACH PERSON WALKS ON A DIFFERENT VILLAGE LANE
+humanWalkers.forEach((walker) => {
+  walker.distance += walker.speed * delta * walker.direction;
+
+  // Turn around smoothly at the ends instead of teleporting to the start.
+  if (walker.distance >= 0.98) {
+    walker.distance = 0.98;
+    walker.direction = -1;
+  } else if (walker.distance <= 0.02) {
+    walker.distance = 0.02;
+    walker.direction = 1;
+  }
+
+  const point = walker.route.getPointAt(walker.distance);
+  const tangent = walker.route.getTangentAt(walker.distance);
+
+  walker.model.position.set(point.x, 0, point.z);
+
+  // Face the direction of travel.
+  const facing = walker.direction === 1 ? tangent : tangent.clone().negate();
+  walker.model.rotation.y = Math.atan2(facing.x, facing.z);
+});
+  
+ const positions = flakes.geometry.attributes.position.array;
+ for(let i=0;i<snowCount;i++){
+  positions[i*3+1]-=0.035;
+  positions[i*3]+=0.003;
+  if(positions[i*3+1]<0){
+   positions[i*3+1]=18;
+  }
+ }
+ flakes.geometry.attributes.position.needsUpdate=true;
+
+ 
+const t = Date.now() * 0.0004;
+
+camera.position.x = 11 + Math.sin(t) * 1.2;
+camera.position.z = 18 + Math.cos(t) * 0.8;
+camera.position.y = 10 + Math.sin(t * 0.7) * 0.3;
+  
+camera.lookAt(
+  Math.sin(t * 0.6) * 1.2,
+  1,
+  0
+);
+  
+ renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+});
+    
+} catch(error) {
+ status.innerText = "Error: " + error.message;
+}
+</script>
