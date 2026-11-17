@@ -525,6 +525,7 @@ for (let i = 0; i < 18; i++) {
 }
 
 const humanMixerList = [];
+const clock = new THREE.Clock();
 
 const humanLoader = new THREE.GLTFLoader();
 
@@ -834,7 +835,6 @@ const delta = clock.getDelta();
 humanMixerList.forEach((mixer) => {
   mixer.update(delta);
 });
-const clock = new THREE.Clock();
   
  const positions = flakes.geometry.attributes.position.array;
  for(let i=0;i<snowCount;i++){
