@@ -568,10 +568,8 @@ humanLoader.load(
       
       humanWalkers.push({
   model: human,
-  startX: pos[0],
-  z: pos[1],
-  speed: 0.35 + index * 0.06,
-  direction: index % 2 === 0 ? 1 : -1
+  distance: index * 0.20,
+  speed: 0.035 + index * 0.005
 });
 
       if (gltf.animations.length > 0) {
@@ -845,23 +843,28 @@ humanMixerList.forEach((mixer) => {
   mixer.update(delta);
 });
 
-// MOVE PEOPLE ALONG THE VILLAGE PATH
+// MOVE PEOPLE ALONG CURVED VILLAGE PATH
 humanWalkers.forEach((walker) => {
-  walker.model.position.x +=
-    walker.direction * walker.speed * delta;
 
-  // Turn around at the end of the path
-  if (walker.model.position.x > 8) {
-    walker.model.position.x = 8;
-    walker.direction = -1;
-    walker.model.rotation.y = Math.PI;
+  walker.distance += walker.speed * delta;
+
+  if (walker.distance > 1) {
+    walker.distance = 0;
   }
 
-  if (walker.model.position.x < -8) {
-    walker.model.position.x = -8;
-    walker.direction = 1;
-    walker.model.rotation.y = 0;
-  }
+  const point = pathCurve.getPointAt(walker.distance);
+  const tangent = pathCurve.getTangentAt(walker.distance);
+
+  walker.model.position.set(
+    point.x,
+    0,
+    point.z
+  );
+
+  walker.model.rotation.y = Math.atan2(
+    tangent.x,
+    tangent.z
+  );
 });
   
  const positions = flakes.geometry.attributes.position.array;
